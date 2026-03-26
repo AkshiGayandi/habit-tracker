@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+  h1 { text-align: center; padding: 20px; font-size: 22px; color: #a8d8a8; letter-spacing: 1px; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 0 16px 16px; flex-wrap: wrap; }
+  .tab { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; background: #2a2a4a; color: #aaa; transition: all 0.2s; }
+  .tab.active { background: #4caf7d; color: #fff; }
+
+  /* ===== DAILY VIEW ===== */
+  #daily { padding: 16px; max-width: 700px; margin: 0 auto; }
+  .week-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+  .week-nav button { background: #2a2a4a; border: none; color: #aaa; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+  .week-nav span { font-size: 14px; color: #ccc; }
+  .day-cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-col { background: #2a2a4a; border-radius: 10px; padding: 8px 4px; text-align: center; }
+  .day-col.today { border: 2px solid #4caf7d; }
+  .day-name { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+  .day-date { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .donut { width: 52px; height: 52px; margin: 0 auto 8px; }
+  .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .donut-pct { font-size: 11px; font-weight: 700; color: #4caf7d; }
+  .habit-checkbox { display: flex; flex-direction: column; gap: 4px; }
+  .hcb { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #ccc; cursor: pointer; padding: 2px; border-radius: 4px; }
+  .hcb:hover { background: #3a3a5a; }
+  .hcb input { accent-color: #4caf7d; width: 14px; height: 14px; cursor: pointer; }
+
+  /* ===== MONTHLY VIEW ===== */
+  #monthly { padding: 16px; max-width: 900px; margin: 0 auto; }
+  .month-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .month-header h2 { font-size: 18px; color: #a8d8a8; }
+  .month-header button { background: #2a2a4a; border: none; color: #aaa; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+  .month-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-box { background: #2a2a4a; border-radius: 10px; padding: 12px; text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 700; color: #4caf7d; }
+  .stat-lbl { font-size: 11px; color: #888; margin-top: 2px; }
+  .progress-bar-wrap { background: #2a2a4a; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+  .pb-label { display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 6px; }
+  .pb { background: #1a1a2e; border-radius: 20px; height: 14px; overflow: hidden; }
+  .pb-fill { background: #4caf7d; height: 100%; border-radius: 20px; transition: width 0.5s; }
+  .month-grid-wrap { overflow-x: auto; }
+  table.month-grid { border-collapse: collapse; min-width: 100%; font-size: 11px; }
+  table.month-grid th { background: #2a2a4a; color: #888; padding: 6px 4px; text-align: center; position: sticky; top: 0; }
+  table.month-grid td { padding: 4px; text-align: center; border-bottom: 1px solid #2a2a4a; }
+  table.month-grid td:first-child { text-align: left; padding-left: 8px; color: #ccc; white-space: nowrap; font-size: 12px; position: sticky; left: 0; background: #1a1a2e; }
+  .check-cell { width: 22px; height: 22px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: auto; font-size: 13px; transition: background 0.15s; }
+  .check-cell.done { background: #4caf7d; }
+  .check-cell.empty { background: #2a2a4a; }
+  .check-cell:hover { opacity: 0.8; }
+  .row-pct { font-size: 11px; color: #4caf7d; font-weight: 700; padding: 0 8px; }
+
+  /* ===== ANALYSIS VIEW ===== */
+  #analysis { padding: 16px; max-width: 700px; margin: 0 auto; }
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .analysis-card { background: #2a2a4a; border-radius: 12px; padding: 14px; }
+  .analysis-card h3 { font-size: 13px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .bar-label { font-size: 12px; color: #ccc; min-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #1a1a2e; border-radius: 20px; height: 10px; }
+  .bar-fill { background: #4caf7d; height: 100%; border-radius: 20px; transition: width 0.5s; }
+  .bar-pct { font-size: 11px; color: #4caf7d; min-width: 32px; text-align: right; }
+  .streak-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1a1a2e; font-size: 13px; }
+  .streak-num { font-size: 18px; font-weight: 700; color: #f0a500; }
+  .mini-chart { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-top: 8px; }
+  .mini-bar { flex: 1; background: #4caf7d; border-radius: 3px 3px 0 0; opacity: 0.7; min-height: 2px; }
+  .mini-bar-label { font-size: 10px; color: #666; text-align: center; margin-top: 2px; }
+  .mini-chart-wrap { }
+
+  /* ===== SETTINGS VIEW ===== */
+  #settings { padding: 16px; max-width: 500px; margin: 0 auto; }
+  .settings-card { background: #2a2a4a; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .settings-card h3 { font-size: 14px; color: #a8d8a8; margin-bottom: 12px; }
+  .habit-list-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #1a1a2e; }
+  .habit-list-item span { flex: 1; font-size: 14px; color: #ccc; }
+  .del-btn { background: #c0392b; border: none; color: #fff; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+  .add-habit-row { display: flex; gap: 8px; margin-top: 12px; }
+  .add-habit-row input { flex: 1; background: #1a1a2e; border: 1px solid #3a3a5a; border-radius: 8px; padding: 8px 12px; color: #eee; font-size: 14px; }
+  .add-btn { background: #4caf7d; border: none; color: #fff; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; font-weight: 700; }
+  .reset-btn { background: #c0392b; border: none; color: #fff; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 14px; width: 100%; margin-top: 8px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<h1>My Habit Tracker</h1>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('daily')">Daily</button>
+  <button class="tab" onclick="showTab('monthly')">Monthly</button>
+  <button class="tab" onclick="showTab('analysis')">Analysis</button>
+  <button class="tab" onclick="showTab('settings')">Settings</button>
+</div>
+
+<div id="daily"></div>
+<div id="monthly" class="hidden"></div>
+<div id="analysis" class="hidden"></div>
+<div id="settings"></div>
+
+<script>
+// ===== STATE =====
+const DEFAULT_HABITS = [
+  "Wake up at 05:00",
+  "Gym",
+  "Reading / Learning",
+  "Budget Tracking",
+  "Project Work",
+  "No Alcohol",
+  "Social Media Detox",
+  "Goal Journaling",
+  "Cold Shower"
+];
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem('habitData') || '{}'); } catch(e) { return {}; }
+}
+function saveData(d) { localStorage.setItem('habitData', JSON.stringify(d)); }
+function loadHabits() {
+  const h = localStorage.getItem('habitList');
+  return h ? JSON.parse(h) : [...DEFAULT_HABITS];
+}
+function saveHabits(h) { localStorage.setItem('habitList', JSON.stringify(h)); }
+
+let data = loadData();
+let habits = loadHabits();
+let weekOffset = 0;
+let monthOffset = 0;
+
+// ===== HELPERS =====
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function today() { return dateKey(new Date()); }
+
+function toggle(dateStr, habit) {
+  if (!data[dateStr]) data[dateStr] = {};
+  data[dateStr][habit] = !data[dateStr][habit];
+  saveData(data);
+  render();
+}
+
+function isChecked(dateStr, habit) {
+  return !!(data[dateStr] && data[dateStr][habit]);
+}
+
+function getDayPct(dateStr) {
+  if (!habits.length) return 0;
+  const done = habits.filter(h => isChecked(dateStr, h)).length;
+  return Math.round(done / habits.length * 100);
+}
+
+// ===== DAILY VIEW =====
+function renderDaily() {
+  const el = document.getElementById('daily');
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay() + 1 + weekOffset * 7); // Monday
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    days.push(d);
+  }
+
+  const weekLabel = days[0].toLocaleDateString('en', {month:'short',day:'numeric'}) + ' – ' + days[6].toLocaleDateString('en', {month:'short',day:'numeric'});
+
+  let html = `<div class="week-nav">
+    <button onclick="weekOffset--;renderDaily()">&#8249;</button>
+    <span>${weekLabel}</span>
+    <button onclick="weekOffset++;renderDaily()">&#8250;</button>
+  </div>
+  <div class="day-cols">`;
+
+  for (const d of days) {
+    const dk = dateKey(d);
+    const isToday = dk === today();
+    const pct = getDayPct(dk);
+    const done = habits.filter(h => isChecked(dk, h)).length;
+    const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const r = 22, circ = 2 * Math.PI * r;
+    const fill = circ * pct / 100;
+
+    html += `<div class="day-col ${isToday ? 'today' : ''}">
+      <div class="day-name">${dayNames[d.getDay()]}</div>
+      <div class="day-date">${d.getDate()}</div>
+      <div class="donut">
+        <svg viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="${r}" fill="none" stroke="#1a1a2e" stroke-width="5"/>
+          <circle cx="26" cy="26" r="${r}" fill="none" stroke="#4caf7d" stroke-width="5"
+            stroke-dasharray="${fill} ${circ}" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="donut-pct">${pct}%</div>
+      <div style="font-size:10px;color:#888;margin-bottom:6px">${done}/${habits.length}</div>
+      <div class="habit-checkbox">`;
+
+    for (const h of habits) {
+      const chk = isChecked(dk, h);
+      const short = h.length > 12 ? h.slice(0,12)+'…' : h;
+      html += `<label class="hcb" title="${h}">
+        <input type="checkbox" ${chk ? 'checked' : ''} onchange="toggle('${dk}','${h.replace(/'/g,"\\'")}')">
+        ${short}
+      </label>`;
+    }
+
+    html += `</div></div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ===== MONTHLY VIEW =====
+function renderMonthly() {
+  const el = document.getElementById('monthly');
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + monthOffset;
+  const d = new Date(year, month, 1);
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const monthName = d.toLocaleDateString('en', {month:'long', year:'numeric'});
+
+  const days = Array.from({length: daysInMonth}, (_,i) => {
+    const dd = new Date(d.getFullYear(), d.getMonth(), i+1);
+    return dateKey(dd);
+  });
+
+  const totalChecks = habits.reduce((s, h) => s + days.filter(dk => isChecked(dk, h)).length, 0);
+  const totalPossible = habits.length * daysInMonth;
+  const pct = totalPossible ? Math.round(totalChecks / totalPossible * 100) : 0;
+  const completedDays = days.filter(dk => getDayPct(dk) === 100).length;
+
+  let html = `<div class="month-header">
+    <button onclick="monthOffset--;renderMonthly()">&#8249;</button>
+    <h2>${monthName}</h2>
+    <button onclick="monthOffset++;renderMonthly()">&#8250;</button>
+  </div>
+  <div class="month-stats">
+    <div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">Overall Progress</div></div>
+    <div class="stat-box"><div class="stat-val">${totalChecks}</div><div class="stat-lbl">Habits Done</div></div>
+    <div class="stat-box"><div class="stat-val">${completedDays}</div><div class="stat-lbl">Perfect Days</div></div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="pb-label"><span>Monthly Progress</span><span>${pct}%</span></div>
+    <div class="pb"><div class="pb-fill" style="width:${pct}%"></div></div>
+  </div>
+  <div class="month-grid-wrap">
+  <table class="month-grid">
+  <thead><tr><th>Habit</th>`;
+  for (let i = 1; i <= daysInMonth; i++) html += `<th>${i}</th>`;
+  html += `<th>%</th></tr></thead><tbody>`;
+
+  for (const h of habits) {
+    const done = days.filter(dk => isChecked(dk, h)).length;
+    const hp = Math.round(done / daysInMonth * 100);
+    const shortH = h.length > 18 ? h.slice(0,18)+'…' : h;
+    html += `<tr><td title="${h}">${shortH}</td>`;
+    days.forEach((dk, i) => {
+      const chk = isChecked(dk, h);
+      const label = dk === today() ? (chk ? '✓' : '·') : (chk ? '✓' : '');
+      html += `<td><div class="check-cell ${chk ? 'done' : 'empty'}" onclick="toggle('${dk}','${h.replace(/'/g,"\\'")}')">
+        ${chk ? '✓' : ''}</div></td>`;
+    });
+    html += `<td class="row-pct">${hp}%</td></tr>`;
+  }
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+// ===== ANALYSIS VIEW =====
+function renderAnalysis() {
+  const el = document.getElementById('analysis');
+
+  // Last 30 days
+  const last30 = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    last30.push(dateKey(d));
+  }
+
+  // Per habit completion rate
+  const habitRates = habits.map(h => {
+    const done = last30.filter(dk => isChecked(dk, h)).length;
+    return { name: h, pct: Math.round(done / 30 * 100) };
+  }).sort((a,b) => b.pct - a.pct);
+
+  // Streaks
+  const streaks = habits.map(h => {
+    let streak = 0;
+    const today_d = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today_d); d.setDate(today_d.getDate() - i);
+      if (isChecked(dateKey(d), h)) streak++;
+      else break;
+    }
+    return { name: h, streak };
+  }).sort((a,b) => b.streak - a.streak).slice(0, 5);
+
+  // Weekly chart (last 8 weeks)
+  const weeks = [];
+  for (let w = 7; w >= 0; w--) {
+    let total = 0, possible = 0;
+    for (let d = 0; d < 7; d++) {
+      const dd = new Date(); dd.setDate(dd.getDate() - w*7 - d);
+      const dk = dateKey(dd);
+      habits.forEach(h => {
+        possible++;
+        if (isChecked(dk, h)) total++;
+      });
+    }
+    weeks.push({ label: 'W'+(8-w), pct: possible ? Math.round(total/possible*100) : 0 });
+  }
+  const maxW = Math.max(...weeks.map(w => w.pct), 1);
+
+  let html = `<div class="analysis-grid">
+  <div class="analysis-card" style="grid-column: span 2">
+    <h3>Habit Success Rate (Last 30 Days)</h3>`;
+  for (const hr of habitRates) {
+    const short = hr.name.length > 18 ? hr.name.slice(0,18)+'…' : hr.name;
+    html += `<div class="bar-row">
+      <span class="bar-label" title="${hr.name}">${short}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${hr.pct}%"></div></div>
+      <span class="bar-pct">${hr.pct}%</span>
+    </div>`;
+  }
+  html += `</div>
+
+  <div class="analysis-card">
+    <h3>Top Streaks</h3>`;
+  if (streaks.length === 0) {
+    html += `<p style="font-size:13px;color:#888">No data yet</p>`;
+  }
+  for (const s of streaks) {
+    const short = s.name.length > 16 ? s.name.slice(0,16)+'…' : s.name;
+    html += `<div class="streak-item">
+      <span style="font-size:12px;color:#ccc" title="${s.name}">${short}</span>
+      <span class="streak-num">${s.streak}🔥</span>
+    </div>`;
+  }
+  html += `</div>
+
+  <div class="analysis-card">
+    <h3>Weekly Progress</h3>
+    <div class="mini-chart">`;
+  for (const w of weeks) {
+    html += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+      <div class="mini-bar" style="height:${Math.round(w.pct/maxW*50)+4}px;width:100%"></div>
+      <div class="mini-bar-label">${w.label}</div>
+    </div>`;
+  }
+  html += `</div></div></div>`;
+  el.innerHTML = html;
+}
+
+// ===== SETTINGS VIEW =====
+function renderSettings() {
+  const el = document.getElementById('settings');
+  let html = `<div class="settings-card">
+    <h3>My Habits</h3>`;
+  for (let i = 0; i < habits.length; i++) {
+    html += `<div class="habit-list-item">
+      <span>${habits[i]}</span>
+      <button class="del-btn" onclick="deleteHabit(${i})">Remove</button>
+    </div>`;
+  }
+  html += `<div class="add-habit-row">
+    <input type="text" id="newHabitInput" placeholder="Add new habit..." onkeydown="if(event.key==='Enter')addHabit()">
+    <button class="add-btn" onclick="addHabit()">+ Add</button>
+  </div>
+  </div>
+  <div class="settings-card">
+    <h3>Data</h3>
+    <p style="font-size:13px;color:#888;margin-bottom:8px">Your data is saved automatically in your browser. It stays private on your device.</p>
+    <button class="reset-btn" onclick="resetAll()">Reset All Data</button>
+  </div>`;
+  el.innerHTML = html;
+}
+
+function addHabit() {
+  const inp = document.getElementById('newHabitInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  habits.push(val);
+  saveHabits(habits);
+  render();
+}
+
+function deleteHabit(i) {
+  if (confirm('Remove "' + habits[i] + '"?')) {
+    habits.splice(i, 1);
+    saveHabits(habits);
+    render();
+  }
+}
+
+function resetAll() {
+  if (confirm('Reset ALL data? This cannot be undone.')) {
+    localStorage.clear();
+    data = {};
+    habits = [...DEFAULT_HABITS];
+    render();
+  }
+}
+
+// ===== TABS =====
+let currentTab = 'daily';
+function showTab(tab) {
+  currentTab = tab;
+  ['daily','monthly','analysis','settings'].forEach(t => {
+    document.getElementById(t).classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('.tab').forEach((btn, i) => {
+    btn.classList.toggle('active', ['daily','monthly','analysis','settings'][i] === tab);
+  });
+  render();
+}
+
+function render() {
+  if (currentTab === 'daily') renderDaily();
+  else if (currentTab === 'monthly') renderMonthly();
+  else if (currentTab === 'analysis') renderAnalysis();
+  else if (currentTab === 'settings') renderSettings();
+}
+
+// init
+renderSettings(); // render settings hidden first for DOM
+render();
+</script>
+</body>
+</html>
